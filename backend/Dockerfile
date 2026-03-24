@@ -14,4 +14,4 @@ EXPOSE 4001
 
 USER node
 
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]
