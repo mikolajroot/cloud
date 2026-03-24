@@ -3,7 +3,8 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 
 const app = express();
-const port = Number(process.env.PORT) || 4000;
+app.set('trust proxy', 1);
+const port = Number(process.env.PORT) || 4001;
 const instanceId = randomUUID();
 
 let nextId = 4;
