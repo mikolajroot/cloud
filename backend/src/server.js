@@ -1,7 +1,6 @@
 import cors from "cors";
 import express from "express";
-import os from os
-import { randomUUID } from "node:crypto";
+import os from "node:os";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -17,6 +16,8 @@ const items = [
 
 app.use(cors());
 app.use(express.json());
+
+let requestCount = 0;
 
 app.use((req, res, next) => {
     requestCount++;

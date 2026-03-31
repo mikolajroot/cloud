@@ -47,7 +47,7 @@ export default function StatsPage() {
           </article>
           <article className="metric">
             <h3>Czas backendu</h3>
-            <strong>{stats.genratedAt}</strong>
+            <strong>{stats.generatedAt}</strong>
           </article>
           <article className="metric">
             <h3>Ilość żądań</h3>
