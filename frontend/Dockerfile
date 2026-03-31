@@ -1,4 +1,4 @@
-FROM node:24-alpine AS deps
+FROM node:22-alpine AS deps
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 
-FROM node:24-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -28,13 +28,12 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 COPY --from=build /app/dist /usr/share/nginx/html
 
-
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
-USER node
+USER nginx
 
 CMD ["nginx", "-g", "daemon off;"]
 

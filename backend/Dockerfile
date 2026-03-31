@@ -1,4 +1,4 @@
-FROM node:24-alpine AS deps
+FROM node:22-alpine AS deps
 
 WORKDIR /api/
 
@@ -8,7 +8,7 @@ RUN npm ci --omit=dev
 
 
 
-FROM node:24-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /api/
 
@@ -18,11 +18,13 @@ COPY --from=deps /api/node_modules ./node_modules
 
 COPY . .
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:4001/health || exit 1
+RUN chown -R node:node /api
+
+USER node
 
 EXPOSE 4001
 
-USER node
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4001/health || exit 1
 
 CMD ["node", "src/server.js"]
