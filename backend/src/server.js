@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import os from os
 import { randomUUID } from "node:crypto";
 
 const app = express();
@@ -53,6 +54,13 @@ app.get("/stats", (_req, res) => {
     generatedAt: new Date().toISOString()
   });
 });
+
+app.get("/health",(_req,res) => {
+  res.json({
+    status: "ok",
+    uptime: os.uptime()
+  });
+} )
 
 app.listen(port, () => {
   console.log(`Product Dashboard API is running on http://localhost:${port}`);
