@@ -45,6 +45,14 @@ export default function StatsPage() {
             <h3>Instancja backendu</h3>
             <strong>{stats.instanceId}</strong>
           </article>
+          <article className="metric">
+            <h3>Czas backendu</h3>
+            <strong>{stats.genratedAt}</strong>
+          </article>
+          <article className="metric">
+            <h3>Ilość żądań</h3>
+            <strong>{stats.totalRequests}</strong>
+          </article>
         </div>
       )}
     </section>
