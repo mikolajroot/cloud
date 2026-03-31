@@ -18,6 +18,11 @@ const items = [
 app.use(cors());
 app.use(express.json());
 
+app.use((req, res, next) => {
+    requestCount++;
+    next();         
+});
+
 app.get("/items", (_req, res) => {
   res.json(items);
 });
@@ -51,7 +56,8 @@ app.get("/stats", (_req, res) => {
   res.json({
     totalProducts: items.length,
     instanceId,
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
+    totalRequests: requestCount
   });
 });
 
