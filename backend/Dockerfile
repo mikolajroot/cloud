@@ -7,12 +7,25 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 
+FROM deps AS test
+
+RUN npm install
+
+COPY . .
+
+RUN npm test
+
+
+
+
 
 FROM node:22-alpine AS production
 
 WORKDIR /api/
 
 ENV NODE_ENV=production
+
+COPY --from=test /app/package.json ./
 
 COPY --from=deps /api/node_modules ./node_modules
 
