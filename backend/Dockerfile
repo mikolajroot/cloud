@@ -18,7 +18,6 @@ RUN npm test
 
 
 
-
 FROM node:22-alpine AS production
 
 WORKDIR /api/
@@ -32,11 +31,11 @@ LABEL org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.title=${NODE_ENV}
 
 
-ENV NODE_ENV={NODE_ENV}
+ENV NODE_ENV=${NODE_ENV}
 
 COPY --from=deps /api/node_modules ./node_modules
 
-COPY src/server.js ./
+COPY src ./src
 
 RUN chown -R node:node /api
 
