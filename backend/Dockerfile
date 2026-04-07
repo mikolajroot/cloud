@@ -25,11 +25,9 @@ WORKDIR /api/
 
 ENV NODE_ENV=production
 
-COPY --from=test /app/package.json ./
-
 COPY --from=deps /api/node_modules ./node_modules
 
-COPY . .
+COPY src/server.js ./
 
 RUN chown -R node:node /api
 
