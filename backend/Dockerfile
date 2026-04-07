@@ -23,7 +23,12 @@ FROM node:22-alpine AS production
 
 WORKDIR /api/
 
-ENV NODE_ENV=production
+ARG BUILD_DATE
+ARG VERSION
+ARG NODE_ENV=production
+
+
+ENV NODE_ENV={NODE_ENV}
 
 COPY --from=deps /api/node_modules ./node_modules
 
