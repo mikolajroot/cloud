@@ -27,6 +27,10 @@ ARG BUILD_DATE
 ARG VERSION
 ARG NODE_ENV=production
 
+LABEL org.opencontainers.image.created=${BUILD_DATE} \
+      org.opencontainers.image.version=${VERSION} \
+      org.opencontainers.image.title=${NODE_ENV}
+
 
 ENV NODE_ENV={NODE_ENV}
 
