@@ -146,9 +146,8 @@ if (isMainModule) {
   initDB().then(() => {
     app.listen(port, () => {
       console.log(`Product Dashboard API is running on http://localhost:${port}`);
-      console.log(`Backend instance id: ${process.env.INSTANCE_ID}`);
     });
   })
 
-
 }
+console.log("ads")
