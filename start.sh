@@ -17,6 +17,7 @@ docker run -d \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=password \
   -e POSTGRES_DB=product_db \
+  -e PGDATA=/var/lib/postgresql/data/pgdata \
   -p 5433:5432 \
   -v postgres_data:/var/lib/postgresql/data \
   postgres:18-alpine

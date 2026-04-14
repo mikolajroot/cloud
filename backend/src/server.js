@@ -35,9 +35,7 @@ const initDB = async () => {
 };
 
 
-export function createApp({
-  instanceId = process.env.INSTANCE_ID,
-} = {}) {
+export function createApp() {
   const app = express();
   app.set("trust proxy", 1);
 
