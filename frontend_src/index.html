@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moja Aplikacja</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background-color: #f0f2f5;
+        padding: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .card {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 450px;
+      }
+      h1,
+      h2 {
+        color: #1a1a1a;
+        margin-top: 0;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 15px;
+        border-radius: 6px;
+        overflow-x: auto;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        background: #e0e0e0;
+      }
+      .hit {
+        background: #d4edda;
+        color: #155724;
+      }
+      .miss {
+        background: #fff3cd;
+        color: #856404;
+      }
+      input,
+      button {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        width: calc(100% - 22px);
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+        border: none;
+        width: 100%;
+        font-weight: bold;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .item-list {
+        list-style: none;
+        padding: 0;
+      }
+      .item-list li {
+        background: #f8f9fa;
+        margin-bottom: 8px;
+        padding: 10px;
+        border-radius: 6px;
+        border-left: 4px solid #007bff;
+        display: flex;
+        justify-content: space-between;
+      }
+      .price {
+        font-weight: bold;
+        color: #28a745;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Nginx Działa!</h1>
+      <p>
+        Serwer plików statycznych pomyślnie wczytał ten plik
+        <code>index.html</code> z Twojego komputera (bind mount).
+      </p>
+
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+      <h3>Test połączenia z API (Backend + Redis)</h3>
+      <p>
+        Status pamięci podręcznej (Redis):
+        <span id="cache-badge" class="badge">Sprawdzam...</span>
+      </p>
+      <pre id="api-result">Łączenie z /api/stats...</pre>
+
+      <button
+        onclick="fetchStats()"
+        style="
+          padding: 10px 15px;
+          cursor: pointer;
+          border-radius: 6px;
+          border: 1px solid #ccc;
+        "
+      >
+        Odśwież statystyki
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>PostgreSQL (Baza danych)</h2>
+
+      <form id="addItemForm">
+        <input
+          type="text"
+          id="itemName"
+          placeholder="Nazwa przedmiotu (np. Klawiatura)"
+          required
+        />
+        <input
+          type="number"
+          id="itemPrice"
+          placeholder="Cena (np. 150.50)"
+          step="0.01"
+          required
+        />
+        <button type="submit">Dodaj przedmiot (POST)</button>
+      </form>
+
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+      <h3>Zapisane przedmioty:</h3>
+      <ul id="itemsList" class="item-list">
+        <li>Ładowanie...</li>
+      </ul>
+      <button onclick="fetchItems()" style="background-color: #6c757d">
+        Odśwież listę (GET)
+      </button>
+    </div>
+
+    <script>
+      function fetchStats() {
+        const resultBox = document.getElementById("api-result");
+        const badge = document.getElementById("cache-badge");
+
+        resultBox.innerText = "Ładowanie...";
+        badge.className = "badge";
+        badge.innerText = "Sprawdzam...";
+
+        fetch("/api/stats")
+          .then((res) => {
+            const cacheStatus = res.headers.get("X-Cache");
+            if (cacheStatus === "HIT") {
+              badge.innerText = "HIT (Odczyt z RAM / Redis)";
+              badge.className = "badge hit";
+            } else if (cacheStatus === "MISS") {
+              badge.innerText = "MISS (Obliczono z PostgreSQL)";
+              badge.className = "badge miss";
+            }
+            return res.json();
+          })
+          .then((data) => (resultBox.innerText = JSON.stringify(data, null, 2)))
+          .catch((err) => {
+            resultBox.innerText = " Błąd połączenia";
+            badge.innerText = "Błąd";
+          });
+      }
+
+      function fetchItems() {
+        const list = document.getElementById("itemsList");
+        list.innerHTML = "<li>Ładowanie...</li>";
+
+        fetch("/api/items")
+          .then((res) => res.json())
+          .then((items) => {
+            if (items.length === 0) {
+              list.innerHTML = "<li>Brak przedmiotów w bazie.</li>";
+              return;
+            }
+
+            list.innerHTML = items
+              .map(
+                (item) => `
+                        <li>
+                            <span>${item.name}</span>
+                            <span class="price">${Number(item.price).toFixed(2)} PLN</span>
+                        </li>
+                    `,
+              )
+              .join("");
+          })
+          .catch((err) => {
+            list.innerHTML = "<li>Błąd pobierania danych.</li>";
+            console.error(err);
+          });
+      }
+
+      document
+        .getElementById("addItemForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const name = document.getElementById("itemName").value;
+          const price = document.getElementById("itemPrice").value;
+
+          const btn = this.querySelector("button");
+          const originalText = btn.innerText;
+          btn.innerText = "Wysyłanie...";
+          btn.disabled = true;
+
+          fetch("/api/items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name, price: parseFloat(price) }),
+          })
+            .then((res) => {
+              if (!res.ok) throw new Error("Błąd serwera");
+              return res.json();
+            })
+            .then(() => {
+              this.reset();
+              fetchItems();
+
+              setTimeout(fetchStats, 500);
+            })
+            .catch((err) => alert("❌ Nie udało się dodać przedmiotu."))
+            .finally(() => {
+              btn.innerText = originalText;
+              btn.disabled = false;
+            });
+        });
+
+      fetchStats();
+      fetchItems();
+    </script>
+  </body>
+</html>

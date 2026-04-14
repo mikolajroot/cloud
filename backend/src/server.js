@@ -1,9 +1,8 @@
 import cors from "cors";
 import express from "express";
-import os from "node:os";
 import { pathToFileURL } from "node:url";
-const { Pool } = require('pg');
-const redis = require('redis');
+import { Pool } from "pg";
+import redis from "redis"
 
 const pgPool = new Pool({
   host: process.env.PGHOST || 'postgres',
@@ -19,9 +18,24 @@ const redisClient = redis.createClient({
 redisClient.connect().catch(console.error);
 
 
+const initDB = async () => {
+  try {
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS items (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        price NUMERIC(10, 2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Tabela 'items' jest gotowa.");
+  } catch (err) {
+    console.error("Błąd podczas inicjalizacji bazy:", err);
+  }
+};
+
 
 export function createApp({
-  now = () => new Date(),
   instanceId = process.env.INSTANCE_ID,
 } = {}) {
   const app = express();
@@ -68,29 +82,36 @@ export function createApp({
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
-
-    res.status(201).json(createdItem);
   });
 
-  app.get('/stats', async (req, res) => {
-    try {
-      const cachedStats = await redisClient.get('api_stats');
-      if (cachedStats) {
-        res.set('X-Cache', 'HIT');
-        return res.json(JSON.parse(cachedStats));
-      }
+app.get('/stats', async (req, res) => {
+  try {
 
-      const statsData = { total_items: 42, active_users: 15, time: Date.now() };
+    const cachedStats = await redisClient.get('api_stats');
 
-
-      await redisClient.setEx('api_stats', 10, JSON.stringify(statsData));
-
-      res.set('X-Cache', 'MISS');
-      res.json(statsData);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    if (cachedStats) {
+      res.set('X-Cache', 'HIT');
+      return res.json(JSON.parse(cachedStats));
     }
-  });
+
+    const result = await pgPool.query('SELECT COUNT(*) AS total_items FROM items');
+    
+    const totalItems = parseInt(result.rows[0].total_items, 10);
+
+    const statsData = { 
+      total_items: totalItems,
+      time: new Date().toISOString()
+    };
+    
+    await redisClient.setEx('api_stats', 10, JSON.stringify(statsData));
+
+    res.set('X-Cache', 'MISS');
+    res.json(statsData);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('/health', async (req, res) => {
   let pgStatus = 'down';
@@ -124,8 +145,12 @@ const isMainModule = process.argv[1]
 if (isMainModule) {
   const port = Number(process.env.PORT) || 4001;
 
-  app.listen(port, () => {
-    console.log(`Product Dashboard API is running on http://localhost:${port}`);
-    console.log(`Backend instance id: ${process.env.INSTANCE_ID}`);
-  });
+  initDB().then(() => {
+    app.listen(port, () => {
+      console.log(`Product Dashboard API is running on http://localhost:${port}`);
+      console.log(`Backend instance id: ${process.env.INSTANCE_ID}`);
+    });
+  })
+
+
 }
