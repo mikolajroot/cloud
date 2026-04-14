@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "pg": "^8.20.0",
+    "redis": "^5.11.0"
   },
   "devDependencies": {
     "mocha": "^11.7.5",
