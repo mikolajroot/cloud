@@ -12,7 +12,7 @@ for VOL in "${VOLUMES[@]}"; do
   echo "Rozmiar danych: $SIZE"
   
 
-  CONTAINERS=$(docker ps -a --filter volume=$VOL --format "{{.Names}}")
+  CONTAINERS=$(docker ps -a --filter volume="$VOL" --format "{{.Names}}")
   if [ -z "$CONTAINERS" ]; then
     echo "odłączone kontenery: BRAK"
   else
