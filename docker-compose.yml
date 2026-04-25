@@ -1,0 +1,72 @@
+name: cloud
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    networks:
+      db-net:
+        ipv4_address: 172.20.0.10
+    mac_address: 02:42:ac:14:00:0a
+    env_file: .env
+    environment:
+      POSTGRES_USER: /run/secrets/db_user
+      POSTGRES_PASSWORD: /run/secrets/db_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      postgres_data: /var/lib/postgresql/data
+    secrets:
+      - db_password
+      - db_user
+  redis:
+    networks:
+      - app-net
+    tmpfs: /data
+  
+
+
+
+volumes:
+    postgres_data:
+    backend_data:
+    redis_data:
+
+networks:
+  proxy-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
+
+  app-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
+
+  db-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+configs:
+  nginx_config:
+    file: ./frontend/nginx.conf
+    external: true
+  app_config:
+    file: ./backend/src/config.js
+    external: true
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  db_user:
+    file: ./secrets/db_user.txt
+
