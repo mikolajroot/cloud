@@ -18,12 +18,100 @@ services:
     secrets:
       - db_password
       - db_user
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   redis:
     networks:
       - app-net
     tmpfs: /data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   
+  backend_1:
+    image: mikolajroot/backend:v2
+    build: ./backend
+    networks:
+      proxy-net:
+        ipv4_address: 172.18.0.11
+      app-net:
+      db-net:
+    env_file: .env
+    environment:
+      PORT: ${BACKEND_PORT_1}
+      PGHOST: postgres
+      PGUSER: /run/secrets/db_user
+      PGPASSWORD: /run/secrets/db_password
+      REDIS_URL: ${REDIS_URL}
+    secrets:
+      - db_password
+      - db_user
+    volumes:
+      backend_data: /app/persistent_data
+    tmpfs: /app/tmp_data
+    configs:
+      - source: app_config
+        target: /api/src/config.js
+    depends_on:
+      - postgres:
+          condition: service_healthy
+      - redis:
+          condition: service_healthy
 
+  backend_2:
+    image: mikolajroot/backend:v2
+    build: ./backend
+    networks:
+      proxy-net:
+        ipv4_address: 172.18.0.12
+      app-net:
+      db-net:
+    env_file: .env
+    environment:
+      PORT: ${BACKEND_PORT_2}
+      PGHOST: postgres
+      PGUSER: /run/secrets/db_user
+      PGPASSWORD: /run/secrets/db_password
+      REDIS_URL: ${REDIS_URL}
+    secrets:
+      - db_password
+      - db_user
+    volumes:
+      backend_data: /app/persistent_data
+    tmpfs: /app/tmp_data
+    configs:
+      - source: app_config
+        target: /api/src/config.js
+    depends_on:
+      - postgres:
+          condition: service_healthy
+      - redis:
+          condition: service_healthy
+
+  nginx:
+    image: mikolajroot/frontend:v2
+    networks:
+      - proxy-net
+    ports:
+      - "80:8080"
+    volumes:
+      - $(pwd)/frontend_src:/usr/share/nginx/html:ro
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+    depends_on:
+      backend_1:
+        condition: service_started
+        restart: true
+      backend_2:
+        condition: service_started
+        restart: true
+    
 
 
 volumes:
@@ -59,10 +147,8 @@ networks:
 configs:
   nginx_config:
     file: ./frontend/nginx.conf
-    external: true
   app_config:
     file: ./backend/src/config.js
-    external: true
 
 secrets:
   db_password:
