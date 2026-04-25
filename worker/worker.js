@@ -1,0 +1,1 @@
+setInterval(() => console.log('Worker is live...'), 5000);
