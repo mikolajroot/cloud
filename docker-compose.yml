@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      postgres_data: /var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     secrets:
       - db_password
       - db_user
@@ -24,14 +24,16 @@ services:
       timeout: 5s
       retries: 5
   redis:
+    image: redis:8-alpine
     networks:
       - app-net
-    tmpfs: /data
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
+    volumes:
+      - redis_data:/data
   
   backend_1:
     image: mikolajroot/backend:v2
@@ -52,15 +54,15 @@ services:
       - db_password
       - db_user
     volumes:
-      backend_data: /app/persistent_data
+      - backend_data:/app/persistent_data
     tmpfs: /app/tmp_data
     configs:
       - source: app_config
         target: /api/src/config.js
     depends_on:
-      - postgres:
+      postgres:
           condition: service_healthy
-      - redis:
+      redis:
           condition: service_healthy
 
   backend_2:
@@ -82,17 +84,36 @@ services:
       - db_password
       - db_user
     volumes:
-      backend_data: /app/persistent_data
+      - backend_data:/app/persistent_data
     tmpfs: /app/tmp_data
     configs:
       - source: app_config
         target: /api/src/config.js
     depends_on:
-      - postgres:
+      postgres:
           condition: service_healthy
-      - redis:
+      redis:
           condition: service_healthy
-
+  
+  worker:
+    image: mikolajroot/worker
+    build: ./worker
+    networks:
+      - app-net
+      - db-net
+    environment:
+      PGHOST: postgres
+      PGUSER: /run/secrets/db_user
+      PGPASSWORD: /run/secrets/db_password
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      postgres:
+          condition: service_healthy
+      redis:
+          condition: service_healthy
+    secrets:
+      - db_password
+      - db_user
   nginx:
     image: mikolajroot/frontend:v2
     networks:
@@ -100,17 +121,27 @@ services:
     ports:
       - "80:8080"
     volumes:
-      - $(pwd)/frontend_src:/usr/share/nginx/html:ro
+      - type: bind
+        source: ./frontend_src
+        target: /usr/share/nginx/html
     configs:
       - source: nginx_config
-        target: /etc/nginx/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
     depends_on:
       backend_1:
         condition: service_started
-        restart: true
       backend_2:
         condition: service_started
-        restart: true
+
+  
+  adminer:
+    image: alpine
+    ports:
+      - "8080-8100:8080"
+    networks:
+      - db-net
+    command: sleep infinity
+
     
 
 
@@ -118,6 +149,7 @@ volumes:
     postgres_data:
     backend_data:
     redis_data:
+    frontend_src:
 
 networks:
   proxy-net:
