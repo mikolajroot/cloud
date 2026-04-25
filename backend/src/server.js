@@ -3,17 +3,23 @@ import express from "express";
 import { pathToFileURL } from "node:url";
 import { Pool } from "pg";
 import redis from "redis"
+import { config } from "./config.js";
 
 const pgPool = new Pool({
-  host: process.env.PGHOST || 'postgres',
-  user: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD || 'password',
-  database: process.env.PGDATABASE || 'product_db',
-  port: 5432,
+  host: config.postgres.host,
+  user: config.postgres.user,
+  password: config.postgres.password,
+  database: config.postgres.database,
+  port: config.postgres.port,
+  connectionTimeoutMillis: config.postgres.connectionTimeoutMs,
+  idleTimeoutMillis: config.postgres.idleTimeoutMs,
 });
 
 const redisClient = redis.createClient({
-  url: `redis://${process.env.REDIS_HOST || 'redis'}:6379`
+  url: config.redis.url || `redis://${config.redis.host}:${config.redis.port}`,
+  socket: {
+    connectTimeout: config.redis.connectTimeoutMs
+  }
 });
 redisClient.connect().catch(console.error);
 
@@ -42,7 +48,7 @@ export function createApp() {
   let requestCount = 0;
 
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: config.limits.jsonBodyLimit }));
 
   app.use((req, res, next) => {
     requestCount++;
@@ -101,7 +107,7 @@ app.get('/stats', async (req, res) => {
       time: new Date().toISOString()
     };
     
-    await redisClient.setEx('api_stats', 10, JSON.stringify(statsData));
+    await redisClient.setEx('api_stats', config.cache.statsTtlSeconds, JSON.stringify(statsData));
 
     res.set('X-Cache', 'MISS');
     res.json(statsData);
@@ -126,6 +132,7 @@ app.get('/health', async (req, res) => {
 
   res.json({
     status: 'ok',
+    instance: config.instanceName,
     postgres: pgStatus,
     redis: redisStatus
   });
@@ -141,13 +148,14 @@ const isMainModule = process.argv[1]
   : false;
 
 if (isMainModule) {
-  const port = Number(process.env.PORT) || 4001;
-
   initDB().then(() => {
-    app.listen(port, () => {
-      console.log(`Product Dashboard API is running on http://localhost:${port}`);
+    const server = app.listen(config.port, () => {
+      console.log(`Product Dashboard API (${config.instanceName}) is running on http://localhost:${config.port}`);
     });
+
+    server.requestTimeout = config.timeouts.requestMs;
+    server.headersTimeout = config.timeouts.headersMs;
+    server.keepAliveTimeout = config.timeouts.keepAliveMs;
   })
 
 }
-console.log("ads")
