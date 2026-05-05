@@ -1,0 +1,22 @@
+services:
+  nginx:
+    ports:
+      - "80:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend_1:
+    logging:
+      driver: "json-file"
+  
+  backend_2:
+    logging:
+      driver: "json-file"
